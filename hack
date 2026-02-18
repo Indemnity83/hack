@@ -496,11 +496,7 @@ split_title_body() {
 
 # SUBCOMMAND: idea (interactive)
 cmd_idea() {
-  local idea=""
-  zparseopts -D -E i:=opt_i || true
-  if [[ -n "${opt_i:-}" ]]; then
-    idea="${opt_i[2]}"
-  fi
+  local idea="${1:-}"
 
   if [[ -z "$idea" ]]; then
     idea="$(prompt_choice "What are you planning to do? (short description)" "")"
