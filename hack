@@ -114,7 +114,8 @@ sanitize_branch_name() {
 }
 
 git_town_available() {
-  git town --version >/dev/null 2>&1
+  git town --version >/dev/null 2>&1 && \
+    git config git-town.main-branch >/dev/null 2>&1
 }
 
 fzf_available() {
