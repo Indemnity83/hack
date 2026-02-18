@@ -29,7 +29,6 @@ CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/hack/config"
 # Hard safety limits so we don't accidentally ship massive diffs:
 MAX_CHARS_DIFF_COMMIT=20000
 MAX_CHARS_DIFF_PROPOSE=50000
-
 # ---- UTIL ----
 die() { print -r -- "❌ $*" >&2; exit 1; }
 info() { print -r -- "ℹ️  $*" >&2; }
@@ -112,7 +111,6 @@ sanitize_branch_name() {
   fi
   print -r -- "$s"
 }
-
 git_town_available() {
   git town --version >/dev/null 2>&1 && \
     git config git-town.main-branch >/dev/null 2>&1
@@ -280,7 +278,6 @@ get_perennial_branches() {
   # Get all perennial branches from git-town config (space-separated list)
   git config git-town.perennial-branches 2>/dev/null || true
 }
-
 ensure_clean_or_handle_changes_for_new_branch() {
   if ! has_changes; then
     return
@@ -380,7 +377,6 @@ create_branch_and_checkout() {
     fi
   fi
 }
-
 # ---- CHANGELOG HELPERS ----
 changelog_excerpt() {
   # Returns a useful excerpt from CHANGELOG.md, favoring "Unreleased" if present.
@@ -403,7 +399,6 @@ last_release_tag() {
   # Best-effort: find the most recent tag reachable. If none, empty.
   git describe --tags --abbrev=0 2>/dev/null || true
 }
-
 # ---- OPENAI ----
 openai_response() {
   # usage: openai_response "$instructions" "$input"
@@ -474,7 +469,6 @@ openai_response() {
 
   print -r -- "$out"
 }
-
 # ---- OUTPUT HELPERS ----
 split_title_body() {
   # usage: split_title_body "$text"
@@ -494,7 +488,6 @@ split_title_body() {
   print -rn -- $'\0'
   print -r -- "$body"
 }
-
 # SUBCOMMAND: idea (interactive)
 cmd_idea() {
   local idea="${1:-}"
@@ -528,7 +521,6 @@ cmd_idea() {
   create_branch_and_checkout "$branch" "$base_branch"
   ok "Now on branch: $(current_branch)"
 }
-
 # SUBCOMMAND: issue (interactive)
 cmd_issue() {
   need_cmd gh
@@ -575,7 +567,6 @@ cmd_issue() {
   create_branch_and_checkout "$branch" "$base_branch"
   ok "Now on branch: $(current_branch)"
 }
-
 # SUBCOMMAND: commit (interactive)
 cmd_commit() {
   has_staged_changes || {
@@ -623,7 +614,6 @@ cmd_commit() {
     *) die "Invalid choice." ;;
   esac
 }
-
 # SUBCOMMAND: propose (interactive, uses gh)
 cmd_propose() {
   need_cmd gh
@@ -662,7 +652,7 @@ cmd_propose() {
 
   local instructions input pr_message combined title body
 
-  instructions=$'You are a senior engineer preparing a GitHub Pull Request message.\n\nGenerate a CONVENTIONAL COMMIT message (no scope) that accurately describes what this branch does.\n\nPR BODY STYLE (read like release notes):\n- Write the body like patch notes for users.\n- Focus on WHAT changed and WHY it matters.\n- Prefer short sections with headings like: Summary / Changes / Notes.\n- Use bullet points. Group related items. Keep it scannable.\n- Do NOT include low-level implementation details unless they affect behavior, compatibility, or contributors.\n\nOutput format:\n- Line 1: <type>: <description>\n- Blank line\n- Body: release-notes style (MUST NOT be empty)\n- Optional blank line + footer ONLY if BREAKING CHANGE (e.g. \"BREAKING CHANGE: ...\")\n\nValid types: feat, fix, refactor, perf, test, docs, build, ci, chore, revert\nNo scope in parentheses.\nDo not invent changes that aren’t in the commits/diff/changelog.\n'
+  instructions=$'You are a senior engineer preparing a GitHub Pull Request message.\n\nGenerate a CONVENTIONAL COMMIT message (no scope) that accurately describes what this branch does.\n\nPR BODY STYLE (read like release notes):\n- Write the body like patch notes for users.\n- Focus on WHAT changed and WHY it matters.\n- Prefer short sections with headings like: Summary / Changes / Notes.\n- Use bullet points. Group related items. Keep it scannable.\n- Do NOT include low-level implementation details unless they affect behavior, compatibility, or contributors.\n\nOutput format:\n- Line 1: <type>: <description>\n- Blank line\n- Body: release-notes style (MUST NOT be empty)\n- Optional blank line + footer ONLY if BREAKING CHANGE (e.g. \"BREAKING CHANGE: ...\")\n\nValid types: feat, fix, refactor, perf, test, docs, build, ci, chore, revert\nNo scope in parentheses.\nDo not invent changes that aren\'t in the commits/diff/changelog.\n'
   input="Repo: $(basename "$(repo_root)")\nBranch: $branch\nBase: $remote_base_ref\nLast release tag (best-effort): ${last_tag:-<none>}\n\nCOMMITS (${remote_base_ref}..HEAD):\n$commits\n\nDIFFSTAT (merge-base ${remote_base_ref}...HEAD):\n$diffstat\n\nCHANGELOG EXCERPT (if present):\n${cl:-<no changelog found>}\n\nDIFF (merge-base ${remote_base_ref}...HEAD, may be truncated):\n$diff_trunc"
 
   pr_message="$(openai_response "$instructions" "$input" | tr -d '\r')"
@@ -733,7 +723,6 @@ cmd_propose() {
     ok "PR created."
   fi
 }
-
 ############################################
 # SUBCOMMAND: port (interactive)
 ############################################
@@ -893,8 +882,6 @@ cmd_port() {
 
   ok "Done!"
 }
-
-
 ############################################
 # SUBCOMMAND: done (interactive)
 ############################################
@@ -1006,7 +993,6 @@ cmd_done() {
 
   ok "Done! Now on $base_branch with latest changes."
 }
-
 ############################################
 # SUBCOMMAND: prune (interactive)
 ############################################
@@ -1126,8 +1112,6 @@ cmd_prune() {
     git checkout "$current_branch" 2>/dev/null || true
   fi
 }
-
-
 # MAIN
 main() {
   need_cmd git
