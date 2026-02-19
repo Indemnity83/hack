@@ -30,4 +30,8 @@ test:
 	echo ""; \
 	[ $$failed -eq 0 ] && echo "All tests passed." || { echo "$$failed test file(s) had failures."; exit 1; }
 
-.PHONY: check test
+install-hooks:
+	git config core.hooksPath .githooks
+	@echo "Git hooks installed (core.hooksPath = .githooks)."
+
+.PHONY: check test install-hooks

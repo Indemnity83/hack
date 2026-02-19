@@ -111,6 +111,7 @@ sanitize_branch_name() {
   fi
   print -r -- "$s"
 }
+# test
 git_town_available() {
   git town --version >/dev/null 2>&1 && \
     git config git-town.main-branch >/dev/null 2>&1

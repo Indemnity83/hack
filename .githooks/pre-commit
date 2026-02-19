@@ -1,0 +1,15 @@
+#!/usr/bin/env zsh
+# Only runs when src/ files are staged.
+
+if ! git diff --cached --name-only | grep -q '^src/'; then
+  exit 0
+fi
+
+print "hack: src/ changes detected — running checks before commit"
+
+make check || { print "❌ Syntax check failed. Commit aborted."; exit 1; }
+make test  || { print "❌ Tests failed. Commit aborted."; exit 1; }
+make       || { print "❌ Build failed. Commit aborted."; exit 1; }
+git add hack
+
+print "✅ hack rebuilt and staged."
