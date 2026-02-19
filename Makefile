@@ -13,6 +13,7 @@ SRC_REST = src/utils.zsh \
            src/commands/port.zsh \
            src/commands/done.zsh \
            src/commands/prune.zsh \
+           src/commands/init.zsh \
            src/main.zsh
 
 SRC = $(HEADER) $(SRC_REST)

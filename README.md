@@ -45,12 +45,11 @@ export OPENAI_MODEL="gpt-4o"
 | `jq` | yes | JSON parsing |
 | `gh` | for `propose`, `done`, `prune`, `issue` | GitHub operations |
 | `fzf` | no | improved selection UI |
-| `git town` | no | branch parent tracking |
 
 Install optional tools for the best experience:
 
 ```bash
-brew install fzf gh git-town
+brew install fzf gh
 ```
 
 ## Commands
@@ -111,17 +110,34 @@ hack done
 
 ### `hack prune`
 
-Bulk-deletes all local branches that have been fully merged into the default branch (plus their remote counterparts). Protected branches (`main`, `master`, the default branch, and any git-town perennials) are never deleted.
+Bulk-deletes all local branches that have been fully merged into the default branch (plus their remote counterparts). Protected branches (`main`, `master`, the default branch, and any perennial branches) are never deleted.
 
 ```bash
 hack prune
 ```
 
-## Git-Town integration
+### `hack init`
 
-If `git town` is configured, `hack` respects it automatically:
+Configures hack for the current repository. Run this once per repo to set the main branch and any perennial branches:
 
-- Uses `git-town.main-branch` as the default base
-- Uses `git town hack` to create branches (preserves branch parent metadata)
-- Reads `git-town-branch.<name>.parent` to find a branch's parent for `propose`
-- Skips `git-town.perennial-branches` during `done` and `prune`
+```bash
+hack init
+```
+
+This writes to your repo's `.git/config`:
+
+```
+hack.main-branch = main
+hack.perennial-branches = release staging
+```
+
+## Per-repo configuration
+
+`hack init` is the recommended way to configure hack per repo. You can also set keys directly:
+
+```bash
+git config hack.main-branch develop
+git config hack.perennial-branches "release staging"
+```
+
+**Git-Town compatibility:** if `git-town.*` config keys are present and no `hack.*` keys have been set, hack reads them automatically. Existing git-town repos continue to work without re-running `hack init`.

@@ -1,6 +1,11 @@
-git_town_available() {
-  git town --version >/dev/null 2>&1 && \
-    git config git-town.main-branch >/dev/null 2>&1
+_hack_config_get() {
+  local key="$1" fallback_key="${2:-}" val
+  val="$(git config "hack.${key}" 2>/dev/null || true)"
+  if [[ -n "$val" ]]; then print -r -- "$val"; return; fi
+  if [[ -n "$fallback_key" ]]; then
+    val="$(git config "git-town.${fallback_key}" 2>/dev/null || true)"
+    [[ -n "$val" ]] && print -r -- "$val"
+  fi
 }
 
 fzf_available() {
@@ -47,8 +52,8 @@ default_base_branch() {
   # 4. Default to "main"
   local base
 
-  # Check git-town config first
-  base="$(git config git-town.main-branch 2>/dev/null || true)"
+  # Check hack/git-town config first
+  base="$(_hack_config_get main-branch main-branch)"
   if [[ -n "$base" ]]; then
     print -r -- "$base"
     return
@@ -79,9 +84,12 @@ find_parent_branch() {
   local current="$1"
   local remote="$2"
 
-  # 1. git-town stores the parent in git config
+  # 1. Explicit parent config (hack namespace first, git-town as fallback)
   local gt_parent
-  gt_parent="$(git config "git-town-branch.${current}.parent" 2>/dev/null || true)"
+  gt_parent="$(git config "hack-branch.${current}.parent" 2>/dev/null || true)"
+  if [[ -z "$gt_parent" ]]; then
+    gt_parent="$(git config "git-town-branch.${current}.parent" 2>/dev/null || true)"
+  fi
   if [[ -n "$gt_parent" ]]; then
     print -r -- "$gt_parent"
     return
@@ -138,9 +146,9 @@ remote_default_branch() {
   local remote="${1:-origin}"
   local ref base
 
-  # For origin, honour git-town config first
+  # For origin, honour hack/git-town config first
   if [[ "$remote" == "origin" ]]; then
-    base="$(git config git-town.main-branch 2>/dev/null || true)"
+    base="$(_hack_config_get main-branch main-branch)"
     [[ -n "$base" ]] && { print -r -- "$base"; return; }
   fi
 
@@ -162,6 +170,6 @@ remote_default_branch() {
 }
 
 get_perennial_branches() {
-  # Get all perennial branches from git-town config (space-separated list)
-  git config git-town.perennial-branches 2>/dev/null || true
+  # Get all perennial branches (hack namespace first, git-town as fallback)
+  _hack_config_get perennial-branches perennial-branches
 }

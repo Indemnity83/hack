@@ -43,7 +43,7 @@ Source lives in `src/`, concatenated by the Makefile into the single-file `hack`
 src/
   header.zsh          # shebang, config loading, constants
   utils.zsh           # die/info/ok, git basics, truncate_str, prompt_choice, sanitize_branch_name
-  git-helpers.zsh     # git-town, fzf, default_base_branch, find_parent_branch, remote helpers
+  git-helpers.zsh     # _hack_config_get, fzf, default_base_branch, find_parent_branch, remote helpers
   branch.zsh          # stash-or-carry prompt, base branch selection, create_branch_and_checkout
   changelog.zsh       # changelog_excerpt, last_release_tag
   openai.zsh          # openai_response() — curl to api.openai.com/v1/responses, jq parsing
@@ -56,6 +56,7 @@ src/
     port.zsh          # cmd_port — cherry-pick with fzf selection
     done.zsh          # cmd_done — clean up merged branch
     prune.zsh         # cmd_prune — bulk-delete merged branches
+    init.zsh          # cmd_init — interactive per-repo setup
   main.zsh            # main() dispatcher + help text
 ```
 
@@ -66,7 +67,8 @@ tests/
   assert.zsh              # assert_eq, assert_contains, assert_max_len, summarize
   test_utils.zsh          # sanitize_branch_name, truncate_str
   test_output.zsh         # split_title_body
-  test_git_helpers.zsh    # remote_to_gh_repo, default_base_branch (uses temp git repos)
+  test_git_helpers.zsh    # remote_to_gh_repo, default_base_branch, get_perennial_branches (uses temp git repos)
+  test_init.zsh           # cmd_init (uses temp git repos, mocks prompt_choice)
 ```
 
 Tests cover the pure/mockable functions. The interactive `cmd_*` functions are not unit-tested — they depend on user input and external services.
@@ -74,12 +76,12 @@ Tests cover the pure/mockable functions. The interactive `cmd_*` functions are n
 ## Key Dependencies
 
 Required: `git`, `curl`, `jq`, `zsh`
-Optional (improve UX): `fzf` (interactive selection), `gh` (GitHub operations), `git town` (branch parent tracking)
+Optional (improve UX): `fzf` (interactive selection), `gh` (GitHub operations)
 
-## Git-Town Integration
+## Per-repo Configuration
 
-The script respects git-town configuration when present: reads `main-branch`, `perennial-branches`, and branch parent relationships. Falls back to heuristics (`origin/HEAD`, common branch names) when git-town is not configured.
+Run `hack init` once per repo to set `hack.main-branch` and `hack.perennial-branches` in `.git/config`. These keys take priority over `git-town.*` equivalents (which are read as silent fallback for backward compatibility).
 
 ## Protected Branches
 
-`cmd_done` and `cmd_prune` never delete: the default branch, `main`, `master`, or any git-town perennial branches.
+`cmd_done` and `cmd_prune` never delete: the default branch, `main`, `master`, or any perennial branches from `hack.perennial-branches` (or `git-town.perennial-branches` as fallback).

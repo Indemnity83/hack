@@ -8,6 +8,7 @@ main() {
   [[ $# -gt 0 ]] && shift
 
   case "$cmd" in
+    init)    cmd_init "$@" ;;
     done)    in_git_repo || die "Run this inside a git repository."; cmd_done "$@" ;;
     port)    in_git_repo || die "Run this inside a git repository."; cmd_port "$@" ;;
     idea)    in_git_repo || die "Run this inside a git repository."; cmd_idea "$@" ;;
@@ -21,6 +22,7 @@ main() {
 hack — git helper (zsh)
 
 Commands:
+  hack init                      Configure hack for this repository
   hack idea ["my idea"]          Create a new feature branch
   hack issue <number>            Create a branch from a GitHub issue
   hack commit                    Generate and create a commit
@@ -30,7 +32,11 @@ Commands:
   hack done                      Clean up merged branch
   hack prune                     Delete all merged branches (bulk cleanup)
 
-Config:
+Per-repo config (stored in .git/config, set via 'hack init'):
+  hack.main-branch               The default base branch (e.g. main, develop)
+  hack.perennial-branches        Space-separated list of protected branches
+
+Global config:
   OPENAI_API_KEY (required):
     Option 1: Environment variable (add to ~/.zshrc or ~/.bashrc)
       export OPENAI_API_KEY='sk-proj-...'
@@ -44,7 +50,7 @@ Config:
 Dependencies:
   git, curl, jq
   propose/done/prune: gh (GitHub CLI)
-  optional: fzf (improved selection UI), git town
+  optional: fzf (improved selection UI)
 
 Install fzf for better experience: brew install fzf
 

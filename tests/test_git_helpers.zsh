@@ -58,13 +58,26 @@ assert_eq "hyphenated org and repo" "acme-corp/my-tool" "$result"
 print ""
 print "default_base_branch"
 
-# git-town config takes priority
+# hack.main-branch config takes priority
 result="$(run_in_tmp_repo \
-  "config git-town.main-branch development" \
+  "config hack.main-branch development" \
   -- "default_base_branch")"
-assert_eq "git-town config" "development" "$result"
+assert_eq "hack.main-branch config" "development" "$result"
 
-# origin/HEAD symref is used when no git-town config
+# git-town.main-branch still works as fallback
+result="$(run_in_tmp_repo \
+  "config git-town.main-branch gt-develop" \
+  -- "default_base_branch")"
+assert_eq "git-town.main-branch fallback" "gt-develop" "$result"
+
+# hack.main-branch wins when both keys present
+result="$(run_in_tmp_repo \
+  "config hack.main-branch hack-main" \
+  "config git-town.main-branch gt-main" \
+  -- "default_base_branch")"
+assert_eq "hack.main-branch wins over git-town" "hack-main" "$result"
+
+# origin/HEAD symref is used when no config
 result="$(run_in_tmp_repo \
   "symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/staging" \
   -- "default_base_branch")"
@@ -78,5 +91,28 @@ result="$(run_in_tmp_repo \
 assert_contains "main-or-master fallback is not empty" "" "$result"  # basic smoke test
 [[ "$result" == "main" || "$result" == "master" ]]
 assert_eq "fallback is main or master" "0" "$?"
+
+# ---- get_perennial_branches ----
+print ""
+print "get_perennial_branches"
+
+# hack.perennial-branches is used
+result="$(run_in_tmp_repo \
+  "config hack.perennial-branches 'release staging'" \
+  -- "get_perennial_branches")"
+assert_eq "hack.perennial-branches" "release staging" "$result"
+
+# git-town.perennial-branches works as fallback
+result="$(run_in_tmp_repo \
+  "config git-town.perennial-branches 'release staging'" \
+  -- "get_perennial_branches")"
+assert_eq "git-town.perennial-branches fallback" "release staging" "$result"
+
+# hack.perennial-branches wins when both present
+result="$(run_in_tmp_repo \
+  "config hack.perennial-branches 'hack-release'" \
+  "config git-town.perennial-branches 'gt-release'" \
+  -- "get_perennial_branches")"
+assert_eq "hack.perennial-branches wins over git-town" "hack-release" "$result"
 
 summarize

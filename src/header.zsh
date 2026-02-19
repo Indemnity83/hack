@@ -4,6 +4,7 @@ set -euo pipefail
 # hack — lightweight git helper with OpenAI
 #
 # Subcommands (interactive):
+#   hack init
 #   hack idea [-i "my idea"]
 #   hack commit
 #   hack propose
@@ -14,7 +15,7 @@ set -euo pipefail
 # Dependencies:
 #   git, curl, jq
 #   propose/done/prune: gh (GitHub CLI)
-#   optional: git town, fzf (better UI for selections)
+#   optional: fzf (better UI for selections)
 
 # ---- CONFIG ----
 # Load API key from environment or config file

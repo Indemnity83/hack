@@ -5,6 +5,7 @@ set -euo pipefail
 # hack — lightweight git helper with OpenAI
 #
 # Subcommands (interactive):
+#   hack init
 #   hack idea [-i "my idea"]
 #   hack commit
 #   hack propose
@@ -15,7 +16,7 @@ set -euo pipefail
 # Dependencies:
 #   git, curl, jq
 #   propose/done/prune: gh (GitHub CLI)
-#   optional: git town, fzf (better UI for selections)
+#   optional: fzf (better UI for selections)
 
 # ---- CONFIG ----
 # Load API key from environment or config file
@@ -113,9 +114,14 @@ sanitize_branch_name() {
   print -r -- "$s"
 }
 # test
-git_town_available() {
-  git town --version >/dev/null 2>&1 && \
-    git config git-town.main-branch >/dev/null 2>&1
+_hack_config_get() {
+  local key="$1" fallback_key="${2:-}" val
+  val="$(git config "hack.${key}" 2>/dev/null || true)"
+  if [[ -n "$val" ]]; then print -r -- "$val"; return; fi
+  if [[ -n "$fallback_key" ]]; then
+    val="$(git config "git-town.${fallback_key}" 2>/dev/null || true)"
+    [[ -n "$val" ]] && print -r -- "$val"
+  fi
 }
 
 fzf_available() {
@@ -162,8 +168,8 @@ default_base_branch() {
   # 4. Default to "main"
   local base
 
-  # Check git-town config first
-  base="$(git config git-town.main-branch 2>/dev/null || true)"
+  # Check hack/git-town config first
+  base="$(_hack_config_get main-branch main-branch)"
   if [[ -n "$base" ]]; then
     print -r -- "$base"
     return
@@ -194,9 +200,12 @@ find_parent_branch() {
   local current="$1"
   local remote="$2"
 
-  # 1. git-town stores the parent in git config
+  # 1. Explicit parent config (hack namespace first, git-town as fallback)
   local gt_parent
-  gt_parent="$(git config "git-town-branch.${current}.parent" 2>/dev/null || true)"
+  gt_parent="$(git config "hack-branch.${current}.parent" 2>/dev/null || true)"
+  if [[ -z "$gt_parent" ]]; then
+    gt_parent="$(git config "git-town-branch.${current}.parent" 2>/dev/null || true)"
+  fi
   if [[ -n "$gt_parent" ]]; then
     print -r -- "$gt_parent"
     return
@@ -253,9 +262,9 @@ remote_default_branch() {
   local remote="${1:-origin}"
   local ref base
 
-  # For origin, honour git-town config first
+  # For origin, honour hack/git-town config first
   if [[ "$remote" == "origin" ]]; then
-    base="$(git config git-town.main-branch 2>/dev/null || true)"
+    base="$(_hack_config_get main-branch main-branch)"
     [[ -n "$base" ]] && { print -r -- "$base"; return; }
   fi
 
@@ -277,8 +286,8 @@ remote_default_branch() {
 }
 
 get_perennial_branches() {
-  # Get all perennial branches from git-town config (space-separated list)
-  git config git-town.perennial-branches 2>/dev/null || true
+  # Get all perennial branches (hack namespace first, git-town as fallback)
+  _hack_config_get perennial-branches perennial-branches
 }
 ensure_clean_or_handle_changes_for_new_branch() {
   if ! has_changes; then
@@ -365,18 +374,14 @@ create_branch_and_checkout() {
     die "Branch already exists locally: $branch"
   fi
 
-  if git_town_available; then
-    if [[ -n "$base" ]]; then
-      git town hack --onto "$base" "$branch"
-    else
-      git town hack "$branch"
-    fi
+  if [[ -n "$base" ]]; then
+    git switch -c "$branch" "$base"
   else
-    if [[ -n "$base" ]]; then
-      git switch -c "$branch" "$base"
-    else
-      git switch -c "$branch"
-    fi
+    git switch -c "$branch"
+  fi
+
+  if [[ -n "$base" ]]; then
+    git config "hack-branch.${branch}.parent" "$base"
   fi
 }
 # ---- CHANGELOG HELPERS ----
@@ -1114,6 +1119,52 @@ cmd_prune() {
     git checkout "$current_branch" 2>/dev/null || true
   fi
 }
+############################################
+# SUBCOMMAND: init (interactive)
+############################################
+cmd_init() {
+  in_git_repo || die "Run this inside a git repository."
+  info "Setting up hack for this repository..."
+  print -r -- "" >&2
+
+  # Detect likely main branch
+  local detected_main
+  detected_main="$(git config hack.main-branch 2>/dev/null || true)"
+  if [[ -z "$detected_main" ]]; then
+    detected_main="$(git config git-town.main-branch 2>/dev/null || true)"
+  fi
+  if [[ -z "$detected_main" ]]; then
+    local ref
+    ref="$(git symbolic-ref -q refs/remotes/origin/HEAD 2>/dev/null || true)"
+    [[ -n "$ref" ]] && detected_main="${ref#refs/remotes/origin/}"
+  fi
+  if [[ -z "$detected_main" ]]; then
+    if git show-ref --verify --quiet refs/heads/main;   then detected_main="main";   fi
+    if git show-ref --verify --quiet refs/heads/master; then detected_main="master"; fi
+  fi
+  : "${detected_main:=main}"
+
+  local main_branch
+  main_branch="$(prompt_choice "Main branch:" "$detected_main")"
+  [[ -n "$main_branch" ]] || die "Main branch cannot be empty."
+
+  print -r -- "" >&2
+  info "Perennial branches are protected from deletion by 'hack done' and 'hack prune'."
+  info "Leave blank to skip."
+  local perennial_input
+  perennial_input="$(prompt_choice "Perennial branches (space-separated):" "")"
+
+  git config hack.main-branch "$main_branch"
+  ok "Set hack.main-branch = $main_branch"
+
+  if [[ -n "$perennial_input" ]]; then
+    git config hack.perennial-branches "$perennial_input"
+    ok "Set hack.perennial-branches = $perennial_input"
+  fi
+
+  print -r -- "" >&2
+  ok "hack is configured for this repository."
+}
 # MAIN
 main() {
   need_cmd git
@@ -1124,6 +1175,7 @@ main() {
   [[ $# -gt 0 ]] && shift
 
   case "$cmd" in
+    init)    cmd_init "$@" ;;
     done)    in_git_repo || die "Run this inside a git repository."; cmd_done "$@" ;;
     port)    in_git_repo || die "Run this inside a git repository."; cmd_port "$@" ;;
     idea)    in_git_repo || die "Run this inside a git repository."; cmd_idea "$@" ;;
@@ -1137,6 +1189,7 @@ main() {
 hack — git helper (zsh)
 
 Commands:
+  hack init                      Configure hack for this repository
   hack idea ["my idea"]          Create a new feature branch
   hack issue <number>            Create a branch from a GitHub issue
   hack commit                    Generate and create a commit
@@ -1146,7 +1199,11 @@ Commands:
   hack done                      Clean up merged branch
   hack prune                     Delete all merged branches (bulk cleanup)
 
-Config:
+Per-repo config (stored in .git/config, set via 'hack init'):
+  hack.main-branch               The default base branch (e.g. main, develop)
+  hack.perennial-branches        Space-separated list of protected branches
+
+Global config:
   OPENAI_API_KEY (required):
     Option 1: Environment variable (add to ~/.zshrc or ~/.bashrc)
       export OPENAI_API_KEY='sk-proj-...'
@@ -1160,7 +1217,7 @@ Config:
 Dependencies:
   git, curl, jq
   propose/done/prune: gh (GitHub CLI)
-  optional: fzf (improved selection UI), git town
+  optional: fzf (improved selection UI)
 
 Install fzf for better experience: brew install fzf
 

@@ -83,17 +83,13 @@ create_branch_and_checkout() {
     die "Branch already exists locally: $branch"
   fi
 
-  if git_town_available; then
-    if [[ -n "$base" ]]; then
-      git town hack --onto "$base" "$branch"
-    else
-      git town hack "$branch"
-    fi
+  if [[ -n "$base" ]]; then
+    git switch -c "$branch" "$base"
   else
-    if [[ -n "$base" ]]; then
-      git switch -c "$branch" "$base"
-    else
-      git switch -c "$branch"
-    fi
+    git switch -c "$branch"
+  fi
+
+  if [[ -n "$base" ]]; then
+    git config "hack-branch.${branch}.parent" "$base"
   fi
 }
