@@ -21,4 +21,13 @@ hack: $(SRC)
 check:
 	@for f in $(SRC); do zsh -n $$f && echo "ok: $$f"; done
 
-.PHONY: check
+test:
+	@failed=0; \
+	for f in tests/test_*.zsh; do \
+	  echo "--- $$f ---"; \
+	  zsh $$f || failed=$$((failed+1)); \
+	done; \
+	echo ""; \
+	[ $$failed -eq 0 ] && echo "All tests passed." || { echo "$$failed test file(s) had failures."; exit 1; }
+
+.PHONY: check test
