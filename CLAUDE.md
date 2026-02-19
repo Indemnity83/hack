@@ -4,49 +4,72 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`hack` is a single-file Zsh CLI utility (~1,200 lines) that augments git workflows with OpenAI-powered assistance. It automates branch creation, commit message generation, and GitHub PR creation.
+`hack` is a Zsh CLI utility that augments git workflows with OpenAI-powered assistance. It automates branch creation, commit message generation, and GitHub PR creation.
 
-## Running and Testing
+`hack` is a **generated file** — the source of truth is `src/`. Do not edit `hack` directly.
 
-There is no build system. The script is a standalone executable:
+## Build System
 
 ```bash
-# Run directly
+make              # rebuild hack from src/
+make check        # zsh -n syntax-check every source file
+make test         # run the test suite
+make install-hooks  # one-time: activate the pre-commit hook (per clone)
+```
+
+The pre-commit hook (`.githooks/pre-commit`) fires automatically when `src/` files are staged. It runs `make check`, `make test`, and `make`, then stages the rebuilt `hack`.
+
+## Running
+
+```bash
 ./hack --help
 ./hack idea -i "my feature idea"
-
-# Syntax check (no test suite exists)
-zsh -n hack
 ```
 
 ## Configuration
 
-The script requires `~/.config/hack/config`:
 ```bash
 export OPENAI_API_KEY="sk-proj-..."
 export OPENAI_MODEL="gpt-4o"  # optional, defaults to gpt-5.2
 ```
 
+Or place in `~/.config/hack/config`.
+
 ## Architecture
 
-The entire program lives in the single `hack` file with this structure:
+Source lives in `src/`, concatenated by the Makefile into the single-file `hack` distributable.
 
-**Configuration & constants** (lines ~19-31): Loads `~/.config/hack/config`, defines diff size limits (20k chars for commits, 50k for PRs).
+```
+src/
+  header.zsh          # shebang, config loading, constants
+  utils.zsh           # die/info/ok, git basics, truncate_str, prompt_choice, sanitize_branch_name
+  git-helpers.zsh     # git-town, fzf, default_base_branch, find_parent_branch, remote helpers
+  branch.zsh          # stash-or-carry prompt, base branch selection, create_branch_and_checkout
+  changelog.zsh       # changelog_excerpt, last_release_tag
+  openai.zsh          # openai_response() — curl to api.openai.com/v1/responses, jq parsing
+  output.zsh          # split_title_body() — NUL-separated title/body parsing
+  commands/
+    idea.zsh          # cmd_idea — branch name from free-text idea
+    issue.zsh         # cmd_issue — branch name from GitHub issue (via gh CLI)
+    commit.zsh        # cmd_commit — commit message from staged diff
+    propose.zsh       # cmd_propose — create/update GitHub PR
+    port.zsh          # cmd_port — cherry-pick with fzf selection
+    done.zsh          # cmd_done — clean up merged branch
+    prune.zsh         # cmd_prune — bulk-delete merged branches
+  main.zsh            # main() dispatcher + help text
+```
 
-**Utility functions** (lines ~33-281): Error handling (`die`, `info`, `ok`), git helpers, interactive prompts (`prompt_choice`, `confirm`, `select_with_fzf`), branch discovery (`default_base_branch`, `find_parent_branch`).
+## Tests
 
-**Changelog support** (lines ~383-404): Extracts unreleased section from `CHANGELOG.md` for PR context.
+```
+tests/
+  assert.zsh              # assert_eq, assert_contains, assert_max_len, summarize
+  test_utils.zsh          # sanitize_branch_name, truncate_str
+  test_output.zsh         # split_title_body
+  test_git_helpers.zsh    # remote_to_gh_repo, default_base_branch (uses temp git repos)
+```
 
-**OpenAI integration** (lines ~406-475): `openai_response()` posts to `https://api.openai.com/v1/responses` using `curl`, parses with `jq`.
-
-**Command dispatcher** (lines ~480+): `main()` routes to individual `cmd_*` functions:
-- `cmd_idea` — generates branch name from a free-text idea
-- `cmd_issue` — generates branch name from a GitHub issue (via `gh` CLI)
-- `cmd_commit` — generates commit message from staged diff
-- `cmd_propose` — creates/updates GitHub PR with AI-generated conventional commit title and release-notes-style body
-- `cmd_port` — cherry-picks commits across branches with fzf-powered selection
-- `cmd_done` — safely deletes a merged feature branch
-- `cmd_prune` — bulk-deletes all merged non-protected branches
+Tests cover the pure/mockable functions. The interactive `cmd_*` functions are not unit-tested — they depend on user input and external services.
 
 ## Key Dependencies
 
