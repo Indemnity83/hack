@@ -4,12 +4,17 @@ A lightweight git CLI that uses OpenAI to automate the repetitive parts of your 
 
 ## Install
 
-Copy `hack` somewhere on your `$PATH` and make it executable:
+```bash
+curl -fsSL https://raw.githubusercontent.com/Indemnity83/hack/main/hack -o /usr/local/bin/hack && chmod +x /usr/local/bin/hack
+```
+
+Or if you prefer `~/.local/bin` (no `sudo` required):
 
 ```bash
-cp hack /usr/local/bin/hack
-chmod +x /usr/local/bin/hack
+mkdir -p ~/.local/bin && curl -fsSL https://raw.githubusercontent.com/Indemnity83/hack/main/hack -o ~/.local/bin/hack && chmod +x ~/.local/bin/hack
 ```
+
+Make sure the target directory is on your `$PATH`.
 
 ## Configuration
 
