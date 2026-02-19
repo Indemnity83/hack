@@ -55,13 +55,13 @@ brew install fzf gh git-town
 
 ## Commands
 
-### `hack idea [-i "description"]`
+### `hack idea ["description"]`
 
 Creates a new feature branch. AI suggests a branch name from your description; you confirm or edit it before the branch is created. If you have uncommitted changes, you can bring them along or stash them.
 
 ```bash
 hack idea
-hack idea -i "add dark mode toggle to settings page"
+hack idea "add dark mode toggle to settings page"
 ```
 
 ### `hack issue <number>`

@@ -1137,7 +1137,7 @@ main() {
 hack — git helper (zsh)
 
 Commands:
-  hack idea [-i "my idea"]       Create a new feature branch
+  hack idea ["my idea"]          Create a new feature branch
   hack issue <number>            Create a branch from a GitHub issue
   hack commit                    Generate and create a commit
   hack propose [remote]          Create/update a GitHub PR (default remote: origin)
